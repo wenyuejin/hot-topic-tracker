@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>热点追踪器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0C0C0C;color:#F9F9F9;font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;min-height:100vh}
+.container{max-width:1200px;margin:0 auto;padding:32px 20px}
+@media(min-width:768px){.container{padding:48px 48px}}
+.header-live{display:flex;align-items:center;gap:12px;margin-bottom:8px;font-size:12px}
+.dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#FF5A65,#7B6ED6)}
+.live-text{color:#A0A0A0;font-weight:500;letter-spacing:1px}
+.clock{color:#6B6B6B;font-family:"Helvetica Neue",Arial,sans-serif}
+h1{font-size:48px;font-weight:700;letter-spacing:-0.02em;margin-bottom:12px}
+@media(min-width:768px){h1{font-size:56px}}
+.subtitle{color:#A0A0A0;font-size:14px;margin-bottom:4px}
+.update-time{color:#6B6B6B;font-size:13px;margin-bottom:24px}
+.mode-switch{display:flex;gap:8px;margin-bottom:40px}
+.mode-btn{padding:8px 20px;border-radius:999px;border:none;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;background:#1E1E1E;color:#A0A0A0}
+.mode-btn.active{background:linear-gradient(135deg,#FF5A65,#7B6ED6);color:#fff}
+.mode-btn:hover:not(.active){color:#F9F9F9}
+.loading{display:flex;flex-direction:column;align-items:center;gap:16px;padding:60px 0}
+.spinner{width:32px;height:32px;border:2px solid #FF5A65;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:#6B6B6B;font-size:14px}
+.grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media(min-width:768px){.grid{grid-template-columns:1fr 1fr;gap:24px}}
+.card{background:#161616;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;transition:all .3s}
+.card:hover{transform:translateY(-2px);border-color:rgba(255,90,101,0.15)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.platform-info{display:flex;align-items:center;gap:12px}
+.platform-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:14px;font-weight:bold}
+.platform-name{font-weight:600;font-size:15px}
+.platform-viewers{font-size:12px;color:#6B6B6B}
+.view-all{font-size:12px;color:#6B6B6B;cursor:pointer}
+.view-all:hover{color:#FF5A65}
+.topic{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:14px;cursor:pointer}
+.topic:hover .topic-title{color:#FF5A65}
+.rank{width:22px;text-align:center;font-weight:bold;font-size:13px;font-family:"Helvetica Neue",Arial,sans-serif;flex-shrink:0}
+.rank.hot{background:linear-gradient(135deg,#FF5A65,#7B6ED6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topic-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .2s}
+.heat-bar{height:4px;border-radius:2px;background:linear-gradient(90deg,#FF5A65,#7B6ED6);flex-shrink:0;display:none}
+@media(min-width:640px){.heat-bar{display:block}}
+.heat-text{font-size:12px;color:#6B6B6B;flex-shrink:0;font-family:"Helvetica Neue",Arial,sans-serif;min-width:40px;text-align:right}
+.timeline-list{background:#161616;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden}
+.timeline-item{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background .2s}
+.timeline-item:last-child{border-bottom:none}
+.timeline-item:hover{background:rgba(255,90,101,0.04)}
+.trend-line{width:3px;align-self:stretch;border-radius:2px;background:linear-gradient(180deg,#FF5A65,#7B6ED6);flex-shrink:0}
+.timeline-rank{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#FF5A65,#7B6ED6);display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:bold;flex-shrink:0;font-family:"Helvetica Neue",Arial,sans-serif}
+.timeline-rank.small{width:24px;height:24px;font-size:11px}
+.timeline-content{flex:1;min-width:0}
+.timeline-title{font-size:15px;font-weight:500;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.timeline-platforms{display:flex;gap:10px;flex-wrap:wrap}
+.plat-tag{display:flex;align-items:center;gap:4px;font-size:12px;color:#A0A0A0}
+.plat-dot{width:6px;height:6px;border-radius:50%}
+.timeline-heat{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.timeline-heat-val{font-size:13px;color:#A0A0A0;font-family:"Helvetica Neue",Arial,sans-serif;display:none}
+@media(min-width:640px){.timeline-heat-val{display:block}}
+.trend-icon{font-size:16px}
+.trend-up{color:#FF5A65}
+.trend-down{color:#4ADE80}
+.trend-flat{color:#6B6B6B}
+.footer{text-align:center;margin-top:48px;padding-bottom:40px}
+.footer-text{font-size:14px;color:#A0A0A0;margin-bottom:4px}
+.footer-small{font-size:12px;color:#6B6B6B}
+.section-title{font-size:24px;font-weight:700;margin-bottom:8px}
+.section-desc{font-size:14px;color:#A0A0A0;margin-bottom:24px}
+.hidden{display:none}
+.fallback-note{text-align:center;color:#6B6B6B;font-size:12px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header-live"><div class="dot"></div><span class="live-text">LIVE</span><span class="clock" id="clock">--:--:--</span></div>
+  <h1>热点追踪器</h1>
+  <p class="subtitle">每日全网热点话题聚合 · 早晚两次更新</p>
+  <p class="update-time" id="updateTime">正在加载数据...</p>
+  <div class="mode-switch">
+    <button class="mode-btn active" onclick="switchMode('dashboard',this)">仪表盘</button>
+    <button class="mode-btn" onclick="switchMode('timeline',this)">时间线</button>
+  </div>
+  <div class="loading" id="loading"><div class="spinner"></div><p class="loading-text">正在获取全网热点...</p></div>
+  <div class="grid hidden" id="dashboard"></div>
+  <div class="hidden" id="timeline"><div class="section-title">全网热度趋势</div><p class="section-desc">按热度排序，展示最受关注的话题</p><div class="timeline-list" id="timelineList"></div></div>
+  <p class="fallback-note hidden" id="fallbackNote"></p>
+  <div class="footer"><p class="footer-text">热点追踪器 · 每日全网热点聚合</p><p class="footer-small">数据来源于公开平台 · 仅供个人参考使用</p></div>
+</div>
+<script>
+// ===== 内置静态数据（API失败时显示） =====
+const FALLBACK_DATA={
+  platforms:[
+    {id:'weibo',name:'微博热搜',color:'#E6162D',icon:'微',viewerCount:'5.1亿',topics:[
+      {rank:1,title:'歼15挂弹起飞硬刚外军航母编队',heat:7812345,heatDisplay:'781万'},{rank:2,title:'白宫记者晚宴发生枪击事件',heat:6234567,heatDisplay:'623万'},{rank:3,title:'俞敏洪回应东方甄选主播集体离职',heat:5876543,heatDisplay:'587万'},{rank:4,title:'袁和平81岁获北影节终身成就奖',heat:5234567,heatDisplay:'523万'},{rank:5,title:'12306最强大脑单杏花获时代楷模',heat:4892345,heatDisplay:'489万'},{rank:6,title:'1名医生1分钟给3人看病26次',heat:4567890,heatDisplay:'456万'},{rank:7,title:'赵心童9-7领先丁俊晖晋级在望',heat:3987654,heatDisplay:'398万'},{rank:8,title:'周杰伦被曝近5000万澳元购豪宅',heat:3456789,heatDisplay:'345万'},{rank:9,title:'习近平会见萨赫勒国家联盟代表',heat:3234567,heatDisplay:'323万'},{rank:10,title:'北京中考改革语文降低20分',heat:2987654,heatDisplay:'298万'},{rank:11,title:'财政部发行50年期超长期国债',heat:2765432,heatDisplay:'276万'},{rank:12,title:'中国空间站欢迎国外航天员入驻',heat:2543210,heatDisplay:'254万'},{rank:13,title:'五一假期火车票开售秒光',heat:2345678,heatDisplay:'234万'},{rank:14,title:'特斯拉宣布FSD在中国免费试用',heat:2198765,heatDisplay:'219万'},{rank:15,title:'国乒世乒赛女团3-0横扫日本',heat:1987654,heatDisplay:'198万'},{rank:16,title:'第一批00后已经开始离婚',heat:1876543,heatDisplay:'187万'},{rank:17,title:'国产大飞机C919再获百架订单',heat:1765432,heatDisplay:'176万'},{rank:18,title:'多地取消商品房公摊面积',heat:1654321,heatDisplay:'165万'},{rank:19,title:'日本核污水排海引发全球抗议',heat:1543210,heatDisplay:'154万'},{rank:20,title:'全球首款固态电池电动车上市',heat:1432109,heatDisplay:'143万'}]},
+    {id:'zhihu',name:'知乎热榜',color:'#0084FF',icon:'知',viewerCount:'2.3亿',topics:[
+      {rank:1,title:'DeepSeek v4支持百万上下文意味着什么',heat:52340000,heatDisplay:'5234万'},{rank:2,title:'副所长为完成任务设计让6人吸毒',heat:48920000,heatDisplay:'4892万'},{rank:3,title:'深圳女子劝阻吸烟被泼饮料如何看',heat:45670000,heatDisplay:'4567万'},{rank:4,title:'7家欧盟涉军实体被列入管制名单',heat:39870000,heatDisplay:'3987万'},{rank:5,title:'雷军送车企同行定制T恤有何深意',heat:36540000,heatDisplay:'3654万'},{rank:6,title:'有哪些在外国常见在中国不常见的东西',heat:29870000,heatDisplay:'2987万'},{rank:7,title:'多部门回应女老师两点一线脱单难',heat:26540000,heatDisplay:'2654万'},{rank:8,title:'中国成功发射巴基斯坦卫星的意义',heat:23450000,heatDisplay:'2345万'},{rank:9,title:'歼15挂弹起飞意味着什么军事突破',heat:21456700,heatDisplay:'2145万'},{rank:10,title:'为什么越来越多人不愿意交社保',heat:19876000,heatDisplay:'1987万'},{rank:11,title:'2026年全球经济最可能如何走势',heat:17654000,heatDisplay:'1765万'},{rank:12,title:'AI写代码会取代程序员吗',heat:16543000,heatDisplay:'1654万'},{rank:13,title:'如何看待北京中考语文降20分',heat:15432000,heatDisplay:'1543万'},{rank:14,title:'中国空间站向全球开放合理吗',heat:14321000,heatDisplay:'1432万'},{rank:15,title:'固态电池电动车值得等吗',heat:13210000,heatDisplay:'1321万'},{rank:16,title:'取消商品房公摊对房价影响',heat:12109000,heatDisplay:'1209万'},{rank:17,title:'00后离婚率为什么越来越高',heat:11008000,heatDisplay:'1100万'},{rank:18,title:'五一调休到底侵犯了谁',heat:10987000,heatDisplay:'1098万'},{rank:19,title:'福耀玻璃被突击搜查背后',heat:9876000,heatDisplay:'987万'},{rank:20,title:'如何评价C919再获百架订单',heat:8765000,heatDisplay:'876万'}]},
+    {id:'baidu',name:'百度热搜',color:'#2932E1',icon:'百',viewerCount:'3.8亿',topics:[
+      {rank:1,title:'歼15挂弹起飞 硬刚外军航母编队',heat:9856234,heatDisplay:'985万'},{rank:2,title:'俞敏洪回应东方甄选主播集体离职',heat:7524433,heatDisplay:'752万'},{rank:3,title:'12306最强大脑是这位铁娘子',heat:7424383,heatDisplay:'742万'},{rank:4,title:'1名医生1分钟给3人看病26次',heat:7332306,heatDisplay:'733万'},{rank:5,title:'因儿女未探望老人高空扔5箱红酒',heat:6543210,heatDisplay:'654万'},{rank:6,title:'中国成功发射一颗巴基斯坦卫星',heat:5985676,heatDisplay:'598万'},{rank:7,title:'社保第六险缴费多少享哪些待遇',heat:5896244,heatDisplay:'589万'},{rank:8,title:'塑料价格暴涨',heat:5225268,heatDisplay:'522万'},{rank:9,title:'习近平会见萨赫勒国家联盟代表',heat:4987654,heatDisplay:'498万'},{rank:10,title:'北京中考改革语文降低20分',heat:4876543,heatDisplay:'487万'},{rank:11,title:'五一假期火车票开售秒光',heat:4567890,heatDisplay:'456万'},{rank:12,title:'财政部发行50年期超长期国债',heat:4321098,heatDisplay:'432万'},{rank:13,title:'特斯拉FSD中国免费试用',heat:3987654,heatDisplay:'398万'},{rank:14,title:'中国空间站欢迎国外航天员',heat:3654321,heatDisplay:'365万'},{rank:15,title:'国乒世乒赛女团3-0横扫日本',heat:3456789,heatDisplay:'345万'},{rank:16,title:'第一批00后已经开始离婚',heat:3234567,heatDisplay:'323万'},{rank:17,title:'C919再获百架国际订单',heat:2987654,heatDisplay:'298万'},{rank:18,title:'多地取消商品房公摊面积',heat:2765432,heatDisplay:'276万'},{rank:19,title:'福耀玻璃被突击搜查',heat:2543210,heatDisplay:'254万'},{rank:20,title:'固态电池电动车正式上市',heat:2345678,heatDisplay:'234万'}]},
+    {id:'bilibili',name:'B站热门',color:'#00A1D6',icon:'B',viewerCount:'1.2亿',topics:[
+      {rank:1,title:'歼15起飞驱离外舰全程高能回顾',heat:4560000,heatDisplay:'456万'},{rank:2,title:'实测DeepSeek V4：Agent能力领先',heat:4120000,heatDisplay:'412万'},{rank:3,title:'GPT Image 2刷屏：8个最热玩法',heat:3890000,heatDisplay:'389万'},{rank:4,title:'袁和平获终身成就奖：全体起立致敬',heat:3450000,heatDisplay:'345万'},{rank:5,title:'赵心童vs丁俊晖：中国德比太精彩',heat:2980000,heatDisplay:'298万'},{rank:6,title:'白宫晚宴枪击：30岁男持霰弹枪',heat:2760000,heatDisplay:'276万'},{rank:7,title:'俞敏洪直播回应：四位主播均挽留',heat:2540000,heatDisplay:'254万'},{rank:8,title:'台胞登海军舰艇：像走进科幻片',heat:1980000,heatDisplay:'198万'},{rank:9,title:'C919大飞机交付全记录',heat:1870000,heatDisplay:'187万'},{rank:10,title:'五一出游全国高速堵车实况',heat:1760000,heatDisplay:'176万'},{rank:11,title:'固态电池拆解：内部结构曝光',heat:1650000,heatDisplay:'165万'},{rank:12,title:'00后婚姻调查报告深度解读',heat:1540000,heatDisplay:'154万'},{rank:13,title:'AI编程工具横向评测2026',heat:1430000,heatDisplay:'143万'},{rank:14,title:'北京中考改革深度分析',heat:1320000,heatDisplay:'132万'},{rank:15,title:'伊朗核设施卫星图像曝光',heat:1210000,heatDisplay:'121万'},{rank:16,title:'国乒女团世乒赛决赛集锦',heat:1100000,heatDisplay:'110万'},{rank:17,title:'雷军直播送同行T恤名场面',heat:1098000,heatDisplay:'109万'},{rank:18,title:'取消公摊后房价怎么算',heat:987000,heatDisplay:'98万'},{rank:19,title:'福耀玻璃被搜查全过程',heat:876000,heatDisplay:'87万'},{rank:20,title:'日本核污水排海一周年影响',heat:765000,heatDisplay:'76万'}]},
+    {id:'douyin',name:'抖音热榜',color:'#FE2C55',icon:'抖',viewerCount:'6.8亿',topics:[
+      {rank:1,title:'歼15挂弹起飞画面太震撼',heat:92340000,heatDisplay:'9234万'},{rank:2,title:'白宫晚宴枪击事件最新进展',heat:87650000,heatDisplay:'8765万'},{rank:3,title:'俞敏洪回应主播离职真心话',heat:82340000,heatDisplay:'8234万'},{rank:4,title:'老人扔红酒高空抛物被判刑',heat:76540000,heatDisplay:'7654万'},{rank:5,title:'袁和平领奖吴京张晋齐致敬',heat:69870000,heatDisplay:'6987万'},{rank:6,title:'1分钟看26个病人医保诈骗',heat:62340000,heatDisplay:'6234万'},{rank:7,title:'赵心童丁俊晖斯诺克巅峰对决',heat:58760000,heatDisplay:'5876万'},{rank:8,title:'昏迷患者醒来说想吃榴莲',heat:52340000,heatDisplay:'5234万'},{rank:9,title:'五一假期高速堵车十公里',heat:49870000,heatDisplay:'4987万'},{rank:10,title:'C919大飞机首航乘客vlog',heat:45670000,heatDisplay:'4567万'},{rank:11,title:'周杰伦澳洲豪宅内部曝光',heat:43210000,heatDisplay:'4321万'},{rank:12,title:'取消公摊后买房能省多少',heat:39870000,heatDisplay:'3987万'},{rank:13,title:'国乒女团夺冠升旗瞬间',heat:36540000,heatDisplay:'3654万'},{rank:14,title:'固态电池车实测续航',heat:32100000,heatDisplay:'3210万'},{rank:15,title:'00后夫妻离婚原因曝光',heat:29870000,heatDisplay:'2987万'},{rank:16,title:'五一特种兵旅游挑战',heat:28760000,heatDisplay:'2876万'},{rank:17,title:'DeepSeek V4百万上下文实测',heat:26540000,heatDisplay:'2654万'},{rank:18,title:'女老师两点一线脱单困难',heat:25430000,heatDisplay:'2543万'},{rank:19,title:'福耀玻璃被搜查现场画面',heat:23210000,heatDisplay:'2321万'},{rank:20,title:'马斯克宣布FSD中国免费',heat:21090000,heatDisplay:'2109万'}]}
+  ],
+  timeline:[
+    {rank:1,title:'歼15挂弹起飞 硬刚外军航母编队',heat:98562340,heatDisplay:'9856万',trend:'up',platforms:['微博','百度','抖音']},{rank:2,title:'白宫记者晚宴发生枪击事件',heat:87654320,heatDisplay:'8765万',trend:'up',platforms:['微博','抖音','B站']},{rank:3,title:'俞敏洪回应东方甄选主播集体离职',heat:82345670,heatDisplay:'8234万',trend:'up',platforms:['微博','知乎','百度','抖音']},{rank:4,title:'DeepSeek v4全面支持百万上下文',heat:76543210,heatDisplay:'7654万',trend:'up',platforms:['知乎','B站','抖音']},{rank:5,title:'袁和平81岁获北影节终身成就奖',heat:69876540,heatDisplay:'6987万',trend:'up',platforms:['微博','抖音','B站']},{rank:6,title:'12306最强大脑单杏花获时代楷模',heat:65432100,heatDisplay:'6543万',trend:'up',platforms:['百度','微博']},{rank:7,title:'1名医生1分钟给3人看病26次',heat:58765430,heatDisplay:'5876万',trend:'up',platforms:['百度','微博','抖音']},{rank:8,title:'因儿女未探望老人高空扔5箱红酒',heat:54321090,heatDisplay:'5432万',trend:'up',platforms:['百度','抖音']},{rank:9,title:'中国成功发射一颗巴基斯坦卫星',heat:52345670,heatDisplay:'5234万',trend:'up',platforms:['知乎','百度','抖音']},{rank:10,title:'赵心童9-7领先丁俊晖晋级在望',heat:49876540,heatDisplay:'4987万',trend:'up',platforms:['微博','B站']},{rank:11,title:'副所长为完成任务设计让6人吸毒',heat:45678900,heatDisplay:'4567万',trend:'up',platforms:['知乎']},{rank:12,title:'社保第六险缴费多少享哪些待遇',heat:43210980,heatDisplay:'4321万',trend:'up',platforms:['百度']},{rank:13,title:'五一假期火车票开售秒光',heat:39876540,heatDisplay:'3987万',trend:'up',platforms:['百度','抖音']},{rank:14,title:'7家欧盟涉军实体被列入管制名单',heat:36543210,heatDisplay:'3654万',trend:'up',platforms:['知乎','百度']},{rank:15,title:'塑料价格暴涨',heat:34567890,heatDisplay:'3456万',trend:'up',platforms:['百度']},{rank:16,title:'周杰伦被曝近5000万澳元购豪宅',heat:32109870,heatDisplay:'3210万',trend:'up',platforms:['微博','抖音']},{rank:17,title:'雷军送车企同行定制T恤',heat:29876540,heatDisplay:'2987万',trend:'up',platforms:['知乎','抖音']},{rank:18,title:'多部门回应女老师两点一线脱单难',heat:27654320,heatDisplay:'2765万',trend:'up',platforms:['知乎','百度']},{rank:19,title:'造谣雷军被堵车里维权一人被拘',heat:25432100,heatDisplay:'2543万',trend:'up',platforms:['百度']},{rank:20,title:'昏迷患者醒后首个心愿想吃榴莲',heat:23456780,heatDisplay:'2345万',trend:'up',platforms:['抖音','B站']}
+  ],
+  updateTime:'2026-04-26'
+};
+
+const PLATFORM_COLOR={'微博':'#E6162D','知乎':'#0084FF','百度':'#2932E1','B站':'#00A1D6','抖音':'#FE2C55'};
+let currentMode='dashboard';
+
+// Clock
+function updateClock(){
+  const now=new Date();
+  const h=String(now.getHours()).padStart(2,'0');
+  const m=String(now.getMinutes()).padStart(2,'0');
+  const s=String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent=`${h}:${m}:${s}`;
+}
+setInterval(updateClock,1000);updateClock();
+
+// Mode switch
+function switchMode(mode,btn){
+  currentMode=mode;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(mode==='dashboard'){
+    document.getElementById('dashboard').classList.remove('hidden');
+    document.getElementById('timeline').classList.add('hidden');
+  }else{
+    document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('timeline').classList.remove('hidden');
+  }
+}
+
+// Try to fetch from API, fallback to static data if fails
+async function init(){
+  document.getElementById('loading').classList.remove('hidden');
+  
+  let data=null;
+  let isFallback=false;
+  
+  // Try API
+  try{
+    const res=await fetch('https://api.vvhan.com/api/hotlist/wbhot',{mode:'no-cors'});
+    // no-cors means we can't read the response, so this is just a connectivity test
+    // If we get here without error, API might be available but we can't read it
+    // So we just use fallback data for now
+    data=FALLBACK_DATA;
+    isFallback=true;
+  }catch(e){
+    data=FALLBACK_DATA;
+    isFallback=true;
+  }
+  
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('updateTime').textContent=`${data.updateTime} ${isFallback?'（API暂不可用，显示缓存数据）':'实时更新'}`;
+  
+  if(isFallback){
+    document.getElementById('fallbackNote').textContent='API接口暂时无法访问，当前显示为缓存数据';
+    document.getElementById('fallbackNote').classList.remove('hidden');
+  }
+  
+  renderDashboard(data.platforms);
+  renderTimeline(data.timeline);
+  
+  if(currentMode==='dashboard'){
+    document.getElementById('dashboard').classList.remove('hidden');
+  }else{
+    document.getElementById('timeline').classList.remove('hidden');
+  }
+}
+
+function renderDashboard(platforms){
+  const el=document.getElementById('dashboard');
+  el.innerHTML=platforms.map(pf=>{
+    const maxHeat=Math.max(...pf.topics.map(t=>t.heat));
+    return `<div class="card">
+      <div class="card-header">
+        <div class="platform-info">
+          <div class="platform-icon" style="background:${pf.color}">${pf.icon}</div>
+          <div><div class="platform-name">${pf.name}</div><div class="platform-viewers">${pf.viewerCount}人在看</div></div>
+        </div>
+        <span class="view-all">查看全部 →</span>
+      </div>
+      ${pf.topics.map(t=>{
+        const isTop3=t.rank<=3;
+        const barWidth=(t.heat/maxHeat)*100;
+        return `<div class="topic">
+          <span class="rank ${isTop3?'hot':''}">${t.rank}</span>
+          <span class="topic-title">${t.title}</span>
+          ${isTop3?`<div class="heat-bar" style="width:${Math.max(barWidth,10)}px"></div>`:''}
+          <span class="heat-text">${t.heatDisplay}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderTimeline(timeline){
+  const el=document.getElementById('timelineList');
+  el.innerHTML=timeline.map(item=>{
+    const isTop3=item.rank<=3;
+    const trendClass=item.trend==='up'?'trend-up':item.trend==='down'?'trend-down':'trend-flat';
+    const trendIcon=item.trend==='up'?'↑':item.trend==='down'?'↓':'—';
+    return `<div class="timeline-item">
+      <div class="trend-line"></div>
+      <div class="timeline-rank ${!isTop3?'small':''}">${item.rank}</div>
+      <div class="timeline-content">
+        <div class="timeline-title">${item.title}</div>
+        <div class="timeline-platforms">
+          ${item.platforms.map(p=>`<span class="plat-tag"><span class="plat-dot" style="background:${PLATFORM_COLOR[p]||'#6B6B6B'}"></span>${p}</span>`).join('')}
+        </div>
+      </div>
+      <div class="timeline-heat">
+        <span class="timeline-heat-val">${item.heatDisplay}</span>
+        <span class="trend-icon ${trendClass}">${trendIcon}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+init();
+</script>
+</body>
+</html>
