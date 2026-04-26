@@ -1,0 +1,17 @@
+cd /mnt/agents/output/app
+
+# 初始化 git
+git init
+
+# 添加所有文件
+git add .
+
+# 提交
+git commit -m "init: 热点追踪器 MVP"
+
+# 关联远程仓库
+git remote add origin https://github.com/wenyuejin/hot-tracker.git
+
+# 推送
+git branch -M main
+git push -u origin main
